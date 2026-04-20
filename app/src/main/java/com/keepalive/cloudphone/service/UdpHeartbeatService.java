@@ -17,6 +17,8 @@ import android.os.Looper;
 import android.os.PowerManager;
 import android.util.Log;
 
+import com.keepalive.cloudphone.R;
+
 import androidx.annotation.Nullable;
 
 import com.keepalive.cloudphone.root.RootHelper;
@@ -292,8 +294,8 @@ public class UdpHeartbeatService extends Service {
             builder = new Notification.Builder(this);
         }
 
-        builder.setContentTitle("Cloud Phone Keep Alive")
-                .setContentText("UDP heartbeat service running")
+        builder.setContentTitle(getString(R.string.notification_title))
+                .setContentText(getString(R.string.notification_text_udp))
                 .setSmallIcon(android.R.drawable.ic_media_play)
                 .setOngoing(true)
                 .setAutoCancel(false);

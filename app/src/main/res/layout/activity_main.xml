@@ -13,7 +13,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Cloud Phone Keep Alive"
+            android:text="@string/title"
             android:textSize="22sp"
             android:textStyle="bold"
             android:paddingBottom="16dp" />
@@ -22,7 +22,7 @@
             android:id="@+id/tv_status"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Status: Stopped"
+            android:text="@string/status_stopped"
             android:textSize="16sp"
             android:paddingBottom="8dp" />
 
@@ -30,7 +30,7 @@
             android:id="@+id/tv_session_info"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Session: Not loaded"
+            android:text="@string/session_not_loaded"
             android:textSize="14sp"
             android:paddingBottom="8dp" />
 
@@ -38,7 +38,7 @@
             android:id="@+id/tv_stats"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Stats: N/A"
+            android:text="@string/stats_na"
             android:textSize="14sp"
             android:paddingBottom="16dp" />
 
@@ -51,7 +51,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Configuration"
+            android:text="@string/config_title"
             android:textSize="18sp"
             android:textStyle="bold"
             android:paddingBottom="8dp" />
@@ -66,7 +66,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Auto Start"
+                android:text="@string/auto_start"
                 android:textSize="14sp" />
 
             <Switch
@@ -85,7 +85,7 @@
             <TextView
                 android:layout_width="80dp"
                 android:layout_height="wrap_content"
-                android:text="Remote IP"
+                android:text="@string/remote_ip"
                 android:textSize="14sp" />
 
             <EditText
@@ -107,7 +107,7 @@
             <TextView
                 android:layout_width="80dp"
                 android:layout_height="wrap_content"
-                android:text="Port"
+                android:text="@string/port"
                 android:textSize="14sp" />
 
             <EditText
@@ -129,7 +129,7 @@
             <TextView
                 android:layout_width="80dp"
                 android:layout_height="wrap_content"
-                android:text="Interval"
+                android:text="@string/interval"
                 android:textSize="14sp" />
 
             <EditText
@@ -153,14 +153,14 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Load Session" />
+                android:text="@string/load_session" />
 
             <Button
                 android:id="@+id/btn_save_config"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Save Config" />
+                android:text="@string/save_config" />
         </LinearLayout>
 
         <View
@@ -180,27 +180,27 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Start" />
+                android:text="@string/start" />
 
             <Button
                 android:id="@+id/btn_stop"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Stop" />
+                android:text="@string/stop" />
 
             <Button
                 android:id="@+id/btn_heartbeat"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Heartbeat" />
+                android:text="@string/heartbeat" />
         </LinearLayout>
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Log"
+            android:text="@string/log_title"
             android:textSize="16sp"
             android:textStyle="bold"
             android:paddingBottom="8dp" />
@@ -215,7 +215,7 @@
                 android:id="@+id/tv_log"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Ready"
+                android:text="@string/log_ready"
                 android:textSize="12sp"
                 android:fontFamily="monospace"
                 android:padding="8dp" />

@@ -1,4 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Cloud Phone Keep Alive</string>
+    <string name="app_name">云手机保活</string>
+    <string name="title">云手机保活</string>
+    <string name="status_stopped">状态：已停止</string>
+    <string name="status_unknown">状态：未知</string>
+    <string name="status_running">状态：运行中</string>
+    <string name="session_not_loaded">会话：未加载</string>
+    <string name="session_prefix">会话：</string>
+    <string name="stats_na">统计：无数据</string>
+    <string name="config_title">配置</string>
+    <string name="auto_start">开机自启</string>
+    <string name="remote_ip">远程IP</string>
+    <string name="port">端口</string>
+    <string name="interval">间隔(秒)</string>
+    <string name="load_session">加载会话</string>
+    <string name="save_config">保存配置</string>
+    <string name="start">启动</string>
+    <string name="stop">停止</string>
+    <string name="heartbeat">心跳</string>
+    <string name="log_title">日志</string>
+    <string name="log_ready">就绪</string>
+    <string name="config_saved">配置已保存</string>
+    <string name="no_session_found">未找到会话，请授予Root权限或手动复制0.bin</string>
+    <string name="service_started">服务已启动</string>
+    <string name="service_stopped">服务已停止</string>
+    <string name="session_loaded_from_app">会话已从应用文件加载</string>
+    <string name="session_auto_loaded">会话自动加载成功</string>
+    <string name="via_root">（通过Root）</string>
+    <string name="session_not_found">未找到会话</string>
+    <string name="keepalive_started">保活服务已启动</string>
+    <string name="keepalive_stopped">保活服务已停止</string>
+    <string name="heartbeat_sent">手动心跳发送成功</string>
+    <string name="heartbeat_failed">手动心跳发送失败：</string>
+    <string name="session_not_loaded_heartbeat">会话未加载，无法发送心跳</string>
+    <string name="notification_title">云手机保活</string>
+    <string name="notification_text_udp">UDP心跳服务运行中</string>
+    <string name="notification_text_service">保活服务运行中</string>
+    <string name="root_status">[Root]</string>
+    <string name="no_root_status">[无Root]</string>
 </resources>

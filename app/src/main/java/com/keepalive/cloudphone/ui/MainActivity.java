@@ -70,43 +70,43 @@ public class MainActivity extends Activity {
         layout.setPadding(32, 32, 32, 32);
 
         TextView title = new TextView(this);
-        title.setText("Cloud Phone Keep Alive");
+        title.setText(getString(R.string.title));
         title.setTextSize(20);
         title.setPadding(0, 0, 0, 24);
         layout.addView(title);
 
         tvStatus = new TextView(this);
-        tvStatus.setText("Status: Unknown");
+        tvStatus.setText(getString(R.string.status_unknown));
         tvStatus.setPadding(0, 0, 0, 16);
         layout.addView(tvStatus);
 
         tvSessionInfo = new TextView(this);
-        tvSessionInfo.setText("Session: Not loaded");
+        tvSessionInfo.setText(getString(R.string.session_not_loaded));
         tvSessionInfo.setPadding(0, 0, 0, 16);
         layout.addView(tvSessionInfo);
 
         tvStats = new TextView(this);
-        tvStats.setText("Stats: N/A");
+        tvStats.setText(getString(R.string.stats_na));
         tvStats.setPadding(0, 0, 0, 16);
         layout.addView(tvStats);
 
         Button btnStart = new Button(this);
-        btnStart.setText("Start Service");
+        btnStart.setText(getString(R.string.start));
         btnStart.setOnClickListener(v -> startKeepAliveService());
         layout.addView(btnStart);
 
         Button btnStop = new Button(this);
-        btnStop.setText("Stop Service");
+        btnStop.setText(getString(R.string.stop));
         btnStop.setOnClickListener(v -> stopKeepAliveService());
         layout.addView(btnStop);
 
         Button btnHeartbeat = new Button(this);
-        btnHeartbeat.setText("Send Heartbeat");
+        btnHeartbeat.setText(getString(R.string.heartbeat));
         btnHeartbeat.setOnClickListener(v -> sendManualHeartbeat());
         layout.addView(btnHeartbeat);
 
         tvLog = new TextView(this);
-        tvLog.setText("Log:");
+        tvLog.setText(getString(R.string.log_title));
         tvLog.setPadding(0, 24, 0, 0);
         layout.addView(tvLog);
 
@@ -175,7 +175,7 @@ public class MainActivity extends Activity {
         }
 
         editor.apply();
-        Toast.makeText(this, "Config saved", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, getString(R.string.config_saved), Toast.LENGTH_SHORT).show();
     }
 
     private void loadSession() {
@@ -189,17 +189,17 @@ public class MainActivity extends Activity {
 
         if (session.loadFromBin(getFilesDir().getAbsolutePath() + "/session/0.bin")) {
             loaded = true;
-            appendLog("Session loaded from app files");
+            appendLog(getString(R.string.session_loaded_from_app));
         } else if (session.autoLoad()) {
             loaded = true;
-            appendLog("Session auto-loaded" + (RootHelper.hasRoot() ? " (via root)" : ""));
+            appendLog(getString(R.string.session_auto_loaded) + (RootHelper.hasRoot() ? getString(R.string.via_root) : ""));
         }
 
         if (loaded) {
             updateSessionInfo();
         } else {
-            appendLog("Session not found");
-            Toast.makeText(this, "No session found. Grant root or copy 0.bin manually", Toast.LENGTH_LONG).show();
+            appendLog(getString(R.string.session_not_found));
+            Toast.makeText(this, getString(R.string.no_session_found), Toast.LENGTH_LONG).show();
         }
     }
 
@@ -211,15 +211,15 @@ public class MainActivity extends Activity {
         } else {
             startService(intent);
         }
-        Toast.makeText(this, "Service started", Toast.LENGTH_SHORT).show();
-        appendLog("KeepAlive service started");
+        Toast.makeText(this, getString(R.string.service_started), Toast.LENGTH_SHORT).show();
+        appendLog(getString(R.string.keepalive_started));
     }
 
     private void stopKeepAliveService() {
         stopService(new Intent(this, UdpHeartbeatService.class));
         stopService(new Intent(this, KeepAliveService.class));
-        Toast.makeText(this, "Service stopped", Toast.LENGTH_SHORT).show();
-        appendLog("KeepAlive service stopped");
+        Toast.makeText(this, getString(R.string.service_stopped), Toast.LENGTH_SHORT).show();
+        appendLog(getString(R.string.keepalive_stopped));
     }
 
     private void sendManualHeartbeat() {
@@ -238,12 +238,12 @@ public class MainActivity extends Activity {
                             data, data.length, addr, session.getRemotePort());
                     socket.send(packet);
                     socket.close();
-                    handler.post(() -> appendLog("Manual heartbeat sent successfully"));
+                    handler.post(() -> appendLog(getString(R.string.heartbeat_sent)));
                 } catch (Exception e) {
-                    handler.post(() -> appendLog("Manual heartbeat failed: " + e.getMessage()));
+                    handler.post(() -> appendLog(getString(R.string.heartbeat_failed) + e.getMessage()));
                 }
             } else {
-                handler.post(() -> appendLog("Session not loaded, cannot send heartbeat"));
+                handler.post(() -> appendLog(getString(R.string.session_not_loaded_heartbeat)));
             }
         }).start();
     }
@@ -251,7 +251,7 @@ public class MainActivity extends Activity {
     private void updateSessionInfo() {
         SessionManager session = SessionManager.getInstance();
         if (tvSessionInfo != null) {
-            tvSessionInfo.setText("Session: " + session.getSummary());
+            tvSessionInfo.setText(getString(R.string.session_prefix) + session.getSummary());
         }
     }
 
@@ -260,10 +260,10 @@ public class MainActivity extends Activity {
             @Override
             public void run() {
                 if (isServiceRunning()) {
-                    String rootStatus = RootHelper.hasRoot() ? " [ROOT]" : " [No Root]";
-                    if (tvStatus != null) tvStatus.setText("Status: Running" + rootStatus);
+                    String rootStatus = RootHelper.hasRoot() ? " " + getString(R.string.root_status) : " " + getString(R.string.no_root_status);
+                    if (tvStatus != null) tvStatus.setText(getString(R.string.status_running) + rootStatus);
                 } else {
-                    if (tvStatus != null) tvStatus.setText("Status: Stopped");
+                    if (tvStatus != null) tvStatus.setText(getString(R.string.status_stopped));
                 }
                 handler.postDelayed(this, 3000);
             }
