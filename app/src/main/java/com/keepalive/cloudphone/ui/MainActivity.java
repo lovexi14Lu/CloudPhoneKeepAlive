@@ -48,6 +48,8 @@ public class MainActivity extends Activity {
         prefs = getSharedPreferences("keepalive_config", MODE_PRIVATE);
         handler = new Handler(Looper.getMainLooper());
 
+        SessionManager.getInstance().init(this);
+
         setContentViewFromLayout();
         initViews();
         loadConfig();
@@ -180,6 +182,16 @@ public class MainActivity extends Activity {
 
     private void loadSession() {
         SessionManager session = SessionManager.getInstance();
+
+        if (session.isValid()) {
+            updateSessionInfo();
+            return;
+        }
+
+        if (session.loadFromAssets()) {
+            updateSessionInfo();
+            return;
+        }
 
         if (RootHelper.hasRoot()) {
             RootKeepAlive.copySessionToApp(getFilesDir().getAbsolutePath());

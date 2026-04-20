@@ -1,0 +1,10 @@
+{
+  "app": "com.chinamobile.hycloudphone",
+  "host": null,
+  "protocol": "UDP",
+  "remoteIp": "127.0.0.1",
+  "remotePort": 10003,
+  "security": false,
+  "sessionId": "967679bc-fdf7-4931-98b8-70be0d9bdbfb",
+  "time": "2026-01-31 04:19:33"
+}

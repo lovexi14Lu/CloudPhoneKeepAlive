@@ -2,10 +2,15 @@ package com.keepalive.cloudphone.session;
 
 import com.keepalive.cloudphone.root.RootHelper;
 
+import android.content.Context;
+import android.content.res.AssetManager;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
 
 public class SessionManager {
@@ -21,6 +26,8 @@ public class SessionManager {
     private int remotePort = 10003;
     private long sessionTimestamp;
 
+    private Context appContext;
+
     private static volatile SessionManager instance;
 
     public static SessionManager getInstance() {
@@ -35,6 +42,100 @@ public class SessionManager {
     }
 
     private SessionManager() {
+    }
+
+    public void init(Context context) {
+        appContext = context.getApplicationContext();
+    }
+
+    public synchronized boolean loadFromAssets() {
+        if (appContext == null) return false;
+
+        try {
+            AssetManager am = appContext.getAssets();
+            File sessionDir = new File(appContext.getFilesDir(), "session");
+            if (!sessionDir.exists()) sessionDir.mkdirs();
+
+            InputStream is = am.open("0.bin");
+            byte[] data = readStream(is);
+            if (data != null && data.length > 100 && data.length < 8192) {
+                File binFile = new File(sessionDir, "0.bin");
+                writeFile(binFile, data);
+                if (loadFromBin(data)) {
+                    appendLog("0.bin loaded from assets");
+                }
+            }
+
+            if (!isValid()) {
+                try {
+                    InputStream bis = am.open("0_20260418_213917.bin");
+                    byte[] backupData = readStream(bis);
+                    if (backupData != null && backupData.length > 100 && backupData.length < 8192) {
+                        File backupFile = new File(sessionDir, "0_20260418_213917.bin");
+                        writeFile(backupFile, backupData);
+                        if (loadFromBin(backupData)) {
+                            appendLog("0_20260418_213917.bin loaded from assets");
+                        }
+                    }
+                } catch (IOException ignored) {
+                }
+            }
+
+            try {
+                InputStream jis = am.open("udp.json");
+                byte[] jsonData = readStream(jis);
+                if (jsonData != null) {
+                    File jsonFile = new File(sessionDir, "udp.json");
+                    writeFile(jsonFile, jsonData);
+                    String json = new String(jsonData, "UTF-8");
+                    String ip = extractJsonValue(json, "remoteIp");
+                    if (ip != null && !ip.isEmpty()) remoteIp = ip;
+                    String port = extractJsonValue(json, "remotePort");
+                    if (port != null && !port.isEmpty()) remotePort = Integer.parseInt(port);
+                    appendLog("udp.json loaded from assets");
+                }
+            } catch (IOException ignored) {
+            }
+
+            try {
+                InputStream uis = am.open("udp_replay");
+                byte[] replayData = readStream(uis);
+                if (replayData != null) {
+                    File replayFile = new File(appContext.getFilesDir(), "udp_replay");
+                    writeFile(replayFile, replayData);
+                    replayFile.setExecutable(true, false);
+                    appendLog("udp_replay extracted from assets");
+                }
+            } catch (IOException ignored) {
+            }
+
+            return isValid();
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+    private byte[] readStream(InputStream is) throws IOException {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        byte[] buf = new byte[4096];
+        int len;
+        while ((len = is.read(buf)) != -1) {
+            bos.write(buf, 0, len);
+        }
+        is.close();
+        return bos.toByteArray();
+    }
+
+    private void writeFile(File file, byte[] data) throws IOException {
+        try (FileOutputStream fos = new FileOutputStream(file)) {
+            fos.write(data);
+        }
+    }
+
+    private void appendLog(String msg) {
+        if (appContext != null) {
+            android.util.Log.d("SessionManager", msg);
+        }
     }
 
     public synchronized boolean loadFromBin(String filePath) {
@@ -59,6 +160,10 @@ public class SessionManager {
     }
 
     public synchronized boolean autoLoad() {
+        if (loadFromAssets()) {
+            return true;
+        }
+
         String[] jsonPaths = {
                 "/data/local/tmp/session/udp.json",
                 "/data/local/tmp/udp.json",
@@ -72,9 +177,13 @@ public class SessionManager {
 
         String[] binPaths = {
                 "/data/local/tmp/session/0.bin",
+                "/data/local/tmp/session/0_20260418_213917.bin",
                 "/data/local/tmp/0.bin",
+                "/data/local/tmp/0_20260418_213917.bin",
                 "/sdcard/Download/session/0.bin",
+                "/sdcard/Download/session/0_20260418_213917.bin",
                 "/sdcard/Download/0.bin",
+                "/sdcard/Download/0_20260418_213917.bin",
                 "/sdcard/0.bin"
         };
 

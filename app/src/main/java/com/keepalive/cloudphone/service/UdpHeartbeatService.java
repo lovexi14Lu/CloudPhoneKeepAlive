@@ -62,6 +62,8 @@ public class UdpHeartbeatService extends Service {
         handler = new Handler(Looper.getMainLooper());
         prefs = getSharedPreferences("keepalive_config", MODE_PRIVATE);
 
+        SessionManager.getInstance().init(this);
+
         acquireWakeLock();
         createNotificationChannel();
         startForeground(NOTIFICATION_ID, buildNotification());
@@ -274,9 +276,9 @@ public class UdpHeartbeatService extends Service {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
                     CHANNEL_ID,
-                    "Cloud Phone Keep Alive",
+                    getString(R.string.notification_title),
                     NotificationManager.IMPORTANCE_LOW);
-            channel.setDescription("Keep cloud phone alive service");
+            channel.setDescription(getString(R.string.notification_text_udp));
             channel.setShowBadge(false);
 
             NotificationManager nm = getSystemService(NotificationManager.class);

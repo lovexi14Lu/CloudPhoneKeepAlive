@@ -83,7 +83,7 @@ public class KeepAliveService extends Service {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
                     CHANNEL_ID,
-                    "Cloud Phone Keep Alive",
+                    getString(R.string.notification_title),
                     NotificationManager.IMPORTANCE_LOW);
             channel.setShowBadge(false);
             NotificationManager nm = getSystemService(NotificationManager.class);
