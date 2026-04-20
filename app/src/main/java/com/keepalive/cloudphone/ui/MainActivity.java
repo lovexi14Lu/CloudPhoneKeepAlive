@@ -183,38 +183,42 @@ public class MainActivity extends Activity {
     }
 
     private void loadSession() {
-        SessionManager session = SessionManager.getInstance();
+        new Thread(() -> {
+            SessionManager session = SessionManager.getInstance();
 
-        if (session.isValid()) {
-            updateSessionInfo();
-            return;
-        }
+            if (session.isValid()) {
+                handler.post(this::updateSessionInfo);
+                return;
+            }
 
-        if (session.loadFromAssets()) {
-            updateSessionInfo();
-            return;
-        }
+            if (session.loadFromAssets()) {
+                handler.post(this::updateSessionInfo);
+                return;
+            }
 
-        if (RootHelper.hasRoot()) {
-            RootKeepAlive.copySessionToApp(getFilesDir().getAbsolutePath());
-        }
+            if (RootHelper.hasRoot()) {
+                RootKeepAlive.copySessionToApp(getFilesDir().getAbsolutePath());
+            }
 
-        boolean loaded = false;
+            boolean loaded = false;
 
-        if (session.loadFromBin(getFilesDir().getAbsolutePath() + "/session/0.bin")) {
-            loaded = true;
-            appendLog(getString(R.string.session_loaded_from_app));
-        } else if (session.autoLoad()) {
-            loaded = true;
-            appendLog(getString(R.string.session_auto_loaded) + (RootHelper.hasRoot() ? getString(R.string.via_root) : ""));
-        }
+            if (session.loadFromBin(getFilesDir().getAbsolutePath() + "/session/0.bin")) {
+                loaded = true;
+                handler.post(() -> appendLog(getString(R.string.session_loaded_from_app)));
+            } else if (session.autoLoad()) {
+                loaded = true;
+                handler.post(() -> appendLog(getString(R.string.session_auto_loaded) + (RootHelper.hasRoot() ? getString(R.string.via_root) : "")));
+            }
 
-        if (loaded) {
-            updateSessionInfo();
-        } else {
-            appendLog(getString(R.string.session_not_found));
-            Toast.makeText(this, getString(R.string.no_session_found), Toast.LENGTH_LONG).show();
-        }
+            if (loaded) {
+                handler.post(this::updateSessionInfo);
+            } else {
+                handler.post(() -> {
+                    appendLog(getString(R.string.session_not_found));
+                    Toast.makeText(this, getString(R.string.no_session_found), Toast.LENGTH_LONG).show();
+                });
+            }
+        }).start();
     }
 
     private void startKeepAliveService() {
@@ -256,7 +260,14 @@ public class MainActivity extends Activity {
         new Thread(() -> {
             SessionManager session = SessionManager.getInstance();
             if (!session.isValid()) {
-                loadSession();
+                if (!session.loadFromAssets()) {
+                    if (RootHelper.hasRoot()) {
+                        RootKeepAlive.copySessionToApp(getFilesDir().getAbsolutePath());
+                    }
+                    if (!session.loadFromBin(getFilesDir().getAbsolutePath() + "/session/0.bin")) {
+                        session.autoLoad();
+                    }
+                }
             }
             if (session.isValid()) {
                 byte[] data = session.buildUdpPacket();
