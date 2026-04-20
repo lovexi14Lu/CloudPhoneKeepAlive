@@ -38,4 +38,7 @@
     <string name="notification_text_service">保活服务运行中</string>
     <string name="root_status">[Root]</string>
     <string name="no_root_status">[无Root]</string>
+    <string name="retry_root">重试Root</string>
+    <string name="root_granted">Root权限已获取</string>
+    <string name="root_denied">Root权限获取失败</string>
 </resources>

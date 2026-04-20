@@ -11,6 +11,8 @@ public class RootHelper {
 
     private static final String TAG = "CloudPhoneKeepAlive";
     private static volatile Boolean hasRoot = null;
+    private static final int ROOT_CHECK_RETRIES = 3;
+    private static final int ROOT_CHECK_INTERVAL_MS = 2000;
 
     public static boolean hasRoot() {
         if (hasRoot != null) return hasRoot;
@@ -18,21 +20,32 @@ public class RootHelper {
         return hasRoot;
     }
 
+    public static void resetRootStatus() {
+        hasRoot = null;
+    }
+
     private static boolean checkRoot() {
-        try {
-            Process p = Runtime.getRuntime().exec("su");
-            DataOutputStream os = new DataOutputStream(p.getOutputStream());
-            os.writeBytes("id\n");
-            os.writeBytes("exit\n");
-            os.flush();
-            boolean ok = p.waitFor(5, TimeUnit.SECONDS);
-            if (ok && p.exitValue() == 0) {
-                Log.i(TAG, "Root access granted");
-                return true;
+        for (int i = 0; i < ROOT_CHECK_RETRIES; i++) {
+            try {
+                Process p = Runtime.getRuntime().exec("su");
+                DataOutputStream os = new DataOutputStream(p.getOutputStream());
+                os.writeBytes("id\n");
+                os.writeBytes("exit\n");
+                os.flush();
+                boolean ok = p.waitFor(10, TimeUnit.SECONDS);
+                if (ok && p.exitValue() == 0) {
+                    Log.i(TAG, "Root access granted on attempt " + (i + 1));
+                    return true;
+                }
+                p.destroyForcibly();
+            } catch (Throwable t) {
+                Log.w(TAG, "Root check attempt " + (i + 1) + " failed: " + t.getMessage());
             }
-        } catch (Throwable t) {
-            Log.w(TAG, "Root not available: " + t.getMessage());
+            if (i < ROOT_CHECK_RETRIES - 1) {
+                try { Thread.sleep(ROOT_CHECK_INTERVAL_MS); } catch (InterruptedException ignored) { break; }
+            }
         }
+        Log.w(TAG, "Root not available after " + ROOT_CHECK_RETRIES + " attempts");
         return false;
     }
 

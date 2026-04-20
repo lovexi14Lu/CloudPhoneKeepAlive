@@ -131,12 +131,14 @@ public class MainActivity extends Activity {
         Button btnHeartbeat = findViewById(R.id.btn_heartbeat);
         Button btnLoadSession = findViewById(R.id.btn_load_session);
         Button btnSaveConfig = findViewById(R.id.btn_save_config);
+        Button btnRetryRoot = findViewById(R.id.btn_retry_root);
 
         if (btnStart != null) btnStart.setOnClickListener(v -> startKeepAliveService());
         if (btnStop != null) btnStop.setOnClickListener(v -> stopKeepAliveService());
         if (btnHeartbeat != null) btnHeartbeat.setOnClickListener(v -> sendManualHeartbeat());
         if (btnLoadSession != null) btnLoadSession.setOnClickListener(v -> loadSession());
         if (btnSaveConfig != null) btnSaveConfig.setOnClickListener(v -> saveConfig());
+        if (btnRetryRoot != null) btnRetryRoot.setOnClickListener(v -> retryRoot());
     }
 
     private void loadConfig() {
@@ -227,6 +229,22 @@ public class MainActivity extends Activity {
         appendLog(getString(R.string.keepalive_started));
     }
 
+    private void retryRoot() {
+        RootHelper.resetRootStatus();
+        new Thread(() -> {
+            boolean granted = RootHelper.hasRoot();
+            handler.post(() -> {
+                if (granted) {
+                    Toast.makeText(this, getString(R.string.root_granted), Toast.LENGTH_SHORT).show();
+                    appendLog(getString(R.string.root_granted));
+                } else {
+                    Toast.makeText(this, getString(R.string.root_denied), Toast.LENGTH_SHORT).show();
+                    appendLog(getString(R.string.root_denied));
+                }
+            });
+        }).start();
+    }
+
     private void stopKeepAliveService() {
         stopService(new Intent(this, UdpHeartbeatService.class));
         stopService(new Intent(this, KeepAliveService.class));
@@ -271,8 +289,9 @@ public class MainActivity extends Activity {
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
+                boolean hasRoot = RootHelper.hasRoot();
+                String rootStatus = hasRoot ? " " + getString(R.string.root_status) : " " + getString(R.string.no_root_status);
                 if (isServiceRunning()) {
-                    String rootStatus = RootHelper.hasRoot() ? " " + getString(R.string.root_status) : " " + getString(R.string.no_root_status);
                     if (tvStatus != null) tvStatus.setText(getString(R.string.status_running) + rootStatus);
                 } else {
                     if (tvStatus != null) tvStatus.setText(getString(R.string.status_stopped));
