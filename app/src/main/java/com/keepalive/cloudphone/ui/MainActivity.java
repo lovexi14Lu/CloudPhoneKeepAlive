@@ -184,41 +184,50 @@ public class MainActivity extends Activity {
 
     private void loadSession() {
         new Thread(() -> {
-            SessionManager session = SessionManager.getInstance();
-
-            if (session.isValid()) {
-                handler.post(this::updateSessionInfo);
-                return;
-            }
-
-            if (session.loadFromAssets()) {
-                handler.post(this::updateSessionInfo);
-                return;
-            }
-
-            if (RootHelper.hasRoot()) {
-                RootKeepAlive.copySessionToApp(getFilesDir().getAbsolutePath());
-            }
-
-            boolean loaded = false;
-
-            if (session.loadFromBin(getFilesDir().getAbsolutePath() + "/session/0.bin")) {
-                loaded = true;
-                handler.post(() -> appendLog(getString(R.string.session_loaded_from_app)));
-            } else if (session.autoLoad()) {
-                loaded = true;
-                handler.post(() -> appendLog(getString(R.string.session_auto_loaded) + (RootHelper.hasRoot() ? getString(R.string.via_root) : "")));
-            }
-
-            if (loaded) {
-                handler.post(this::updateSessionInfo);
-            } else {
-                handler.post(() -> {
-                    appendLog(getString(R.string.session_not_found));
-                    Toast.makeText(this, getString(R.string.no_session_found), Toast.LENGTH_LONG).show();
-                });
+            try {
+                doLoadSession();
+            } catch (Throwable t) {
+                Log.e(TAG, "loadSession crash", t);
+                handler.post(() -> appendLog("loadSession error: " + t.getMessage()));
             }
         }).start();
+    }
+
+    private void doLoadSession() {
+        SessionManager session = SessionManager.getInstance();
+
+        if (session.isValid()) {
+            handler.post(this::updateSessionInfo);
+            return;
+        }
+
+        if (session.loadFromAssets()) {
+            handler.post(this::updateSessionInfo);
+            return;
+        }
+
+        if (RootHelper.hasRoot()) {
+            RootKeepAlive.copySessionToApp(getFilesDir().getAbsolutePath());
+        }
+
+        boolean loaded = false;
+
+        if (session.loadFromBin(getFilesDir().getAbsolutePath() + "/session/0.bin")) {
+            loaded = true;
+            handler.post(() -> appendLog(getString(R.string.session_loaded_from_app)));
+        } else if (session.autoLoad()) {
+            loaded = true;
+            handler.post(() -> appendLog(getString(R.string.session_auto_loaded) + (RootHelper.hasRoot() ? getString(R.string.via_root) : "")));
+        }
+
+        if (loaded) {
+            handler.post(this::updateSessionInfo);
+        } else {
+            handler.post(() -> {
+                appendLog(getString(R.string.session_not_found));
+                Toast.makeText(this, getString(R.string.no_session_found), Toast.LENGTH_LONG).show();
+            });
+        }
     }
 
     private void startKeepAliveService() {
@@ -258,35 +267,44 @@ public class MainActivity extends Activity {
 
     private void sendManualHeartbeat() {
         new Thread(() -> {
-            SessionManager session = SessionManager.getInstance();
-            if (!session.isValid()) {
-                if (!session.loadFromAssets()) {
-                    if (RootHelper.hasRoot()) {
-                        RootKeepAlive.copySessionToApp(getFilesDir().getAbsolutePath());
-                    }
-                    if (!session.loadFromBin(getFilesDir().getAbsolutePath() + "/session/0.bin")) {
-                        session.autoLoad();
-                    }
-                }
-            }
-            if (session.isValid()) {
-                byte[] data = session.buildUdpPacket();
-                try {
-                    java.net.DatagramSocket socket = new java.net.DatagramSocket();
-                    socket.setSoTimeout(10000);
-                    java.net.InetAddress addr = java.net.InetAddress.getByName(session.getRemoteIp());
-                    java.net.DatagramPacket packet = new java.net.DatagramPacket(
-                            data, data.length, addr, session.getRemotePort());
-                    socket.send(packet);
-                    socket.close();
-                    handler.post(() -> appendLog(getString(R.string.heartbeat_sent)));
-                } catch (Exception e) {
-                    handler.post(() -> appendLog(getString(R.string.heartbeat_failed) + e.getMessage()));
-                }
-            } else {
-                handler.post(() -> appendLog(getString(R.string.session_not_loaded_heartbeat)));
+            try {
+                doSendHeartbeat();
+            } catch (Throwable t) {
+                Log.e(TAG, "heartbeat crash", t);
+                handler.post(() -> appendLog("heartbeat error: " + t.getMessage()));
             }
         }).start();
+    }
+
+    private void doSendHeartbeat() {
+        SessionManager session = SessionManager.getInstance();
+        if (!session.isValid()) {
+            if (!session.loadFromAssets()) {
+                if (RootHelper.hasRoot()) {
+                    RootKeepAlive.copySessionToApp(getFilesDir().getAbsolutePath());
+                }
+                if (!session.loadFromBin(getFilesDir().getAbsolutePath() + "/session/0.bin")) {
+                    session.autoLoad();
+                }
+            }
+        }
+        if (session.isValid()) {
+            byte[] data = session.buildUdpPacket();
+            try {
+                java.net.DatagramSocket socket = new java.net.DatagramSocket();
+                socket.setSoTimeout(10000);
+                java.net.InetAddress addr = java.net.InetAddress.getByName(session.getRemoteIp());
+                java.net.DatagramPacket packet = new java.net.DatagramPacket(
+                        data, data.length, addr, session.getRemotePort());
+                socket.send(packet);
+                socket.close();
+                handler.post(() -> appendLog(getString(R.string.heartbeat_sent)));
+            } catch (Exception e) {
+                handler.post(() -> appendLog(getString(R.string.heartbeat_failed) + e.getMessage()));
+            }
+        } else {
+            handler.post(() -> appendLog(getString(R.string.session_not_loaded_heartbeat)));
+        }
     }
 
     private void updateSessionInfo() {

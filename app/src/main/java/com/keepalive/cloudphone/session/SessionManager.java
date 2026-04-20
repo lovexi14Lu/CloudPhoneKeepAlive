@@ -54,16 +54,28 @@ public class SessionManager {
         try {
             AssetManager am = appContext.getAssets();
             File sessionDir = new File(appContext.getFilesDir(), "session");
-            if (!sessionDir.exists()) sessionDir.mkdirs();
+            try {
+                if (!sessionDir.exists()) sessionDir.mkdirs();
+            } catch (Throwable t) {
+                appendLog("mkdirs failed: " + t.getMessage());
+            }
 
-            InputStream is = am.open("0.bin");
-            byte[] data = readStream(is);
-            if (data != null && data.length > 100 && data.length < 8192) {
-                File binFile = new File(sessionDir, "0.bin");
-                writeFile(binFile, data);
-                if (loadFromBin(data)) {
-                    appendLog("0.bin loaded from assets");
+            try {
+                InputStream is = am.open("0.bin");
+                byte[] data = readStream(is);
+                if (data != null && data.length > 100 && data.length < 8192) {
+                    try {
+                        File binFile = new File(sessionDir, "0.bin");
+                        writeFile(binFile, data);
+                    } catch (Throwable t) {
+                        appendLog("write 0.bin failed: " + t.getMessage());
+                    }
+                    if (loadFromBin(data)) {
+                        appendLog("0.bin loaded from assets");
+                    }
                 }
+            } catch (IOException e) {
+                appendLog("0.bin not in assets: " + e.getMessage());
             }
 
             if (!isValid()) {
@@ -71,8 +83,12 @@ public class SessionManager {
                     InputStream bis = am.open("0_20260418_213917.bin");
                     byte[] backupData = readStream(bis);
                     if (backupData != null && backupData.length > 100 && backupData.length < 8192) {
-                        File backupFile = new File(sessionDir, "0_20260418_213917.bin");
-                        writeFile(backupFile, backupData);
+                        try {
+                            File backupFile = new File(sessionDir, "0_20260418_213917.bin");
+                            writeFile(backupFile, backupData);
+                        } catch (Throwable t) {
+                            appendLog("write backup bin failed: " + t.getMessage());
+                        }
                         if (loadFromBin(backupData)) {
                             appendLog("0_20260418_213917.bin loaded from assets");
                         }
@@ -85,13 +101,19 @@ public class SessionManager {
                 InputStream jis = am.open("udp.json");
                 byte[] jsonData = readStream(jis);
                 if (jsonData != null) {
-                    File jsonFile = new File(sessionDir, "udp.json");
-                    writeFile(jsonFile, jsonData);
+                    try {
+                        File jsonFile = new File(sessionDir, "udp.json");
+                        writeFile(jsonFile, jsonData);
+                    } catch (Throwable t) {
+                        appendLog("write udp.json failed: " + t.getMessage());
+                    }
                     String json = new String(jsonData, "UTF-8");
                     String ip = extractJsonValue(json, "remoteIp");
                     if (ip != null && !ip.isEmpty()) remoteIp = ip;
                     String port = extractJsonValue(json, "remotePort");
-                    if (port != null && !port.isEmpty()) remotePort = Integer.parseInt(port);
+                    if (port != null && !port.isEmpty()) {
+                        try { remotePort = Integer.parseInt(port); } catch (NumberFormatException ignored) {}
+                    }
                     appendLog("udp.json loaded from assets");
                 }
             } catch (IOException ignored) {
@@ -101,16 +123,21 @@ public class SessionManager {
                 InputStream uis = am.open("udp_replay");
                 byte[] replayData = readStream(uis);
                 if (replayData != null) {
-                    File replayFile = new File(appContext.getFilesDir(), "udp_replay");
-                    writeFile(replayFile, replayData);
-                    replayFile.setExecutable(true, false);
+                    try {
+                        File replayFile = new File(appContext.getFilesDir(), "udp_replay");
+                        writeFile(replayFile, replayData);
+                        replayFile.setExecutable(true, false);
+                    } catch (Throwable t) {
+                        appendLog("write udp_replay failed: " + t.getMessage());
+                    }
                     appendLog("udp_replay extracted from assets");
                 }
             } catch (IOException ignored) {
             }
 
             return isValid();
-        } catch (IOException e) {
+        } catch (Throwable t) {
+            appendLog("loadFromAssets error: " + t.getMessage());
             return false;
         }
     }
@@ -154,16 +181,22 @@ public class SessionManager {
             rawSessionData = bos.toByteArray();
             parseSessionData();
             return isValid();
-        } catch (IOException e) {
+        } catch (Throwable t) {
+            appendLog("loadFromBin error: " + t.getMessage());
             return false;
         }
     }
 
     public synchronized boolean autoLoad() {
-        if (loadFromAssets()) {
-            return true;
+        try {
+            return doAutoLoad();
+        } catch (Throwable t) {
+            appendLog("autoLoad error: " + t.getMessage());
+            return false;
         }
+    }
 
+    private boolean doAutoLoad() {
         String[] jsonPaths = {
                 "/data/local/tmp/session/udp.json",
                 "/data/local/tmp/udp.json",
@@ -215,47 +248,37 @@ public class SessionManager {
     private boolean rootAutoLoad() {
         if (!RootHelper.hasRoot()) return false;
 
-        String found = RootHelper.findFile("0.bin", "/data/data");
-        if (found != null && !found.isEmpty()) {
-            byte[] data = RootHelper.readFileBinary(found);
-            if (data != null && data.length > 100 && data.length < 8192) {
-                if (loadFromBin(data)) {
-                    try {
-                        String appDir = getFilesDirForPkg(found);
-                        if (appDir != null) {
-                            String jsonPath = appDir + "/session/udp.json";
-                            String json = RootHelper.readFile(jsonPath);
-                            if (json != null) {
-                                String ip = extractJsonValue(json, "remoteIp");
-                                if (ip != null && !ip.isEmpty()) remoteIp = ip;
-                                String port = extractJsonValue(json, "remotePort");
-                                if (port != null && !port.isEmpty()) remotePort = Integer.parseInt(port);
-                            }
-                        }
-                    } catch (Throwable ignored) {
-                    }
-                    return true;
+        try {
+            String found = RootHelper.findFile("0.bin", "/data/local/tmp");
+            if (found != null && !found.isEmpty()) {
+                byte[] data = RootHelper.readFileBinary(found);
+                if (data != null && data.length > 100 && data.length < 8192) {
+                    if (loadFromBin(data)) return true;
                 }
             }
-        }
 
-        found = RootHelper.findFile("0.bin", "/data/local/tmp");
-        if (found != null && !found.isEmpty()) {
-            byte[] data = RootHelper.readFileBinary(found);
-            if (data != null && data.length > 100 && data.length < 8192) {
-                if (loadFromBin(data)) return true;
+            found = RootHelper.findFile("udp.json", "/data/local/tmp");
+            if (found != null && !found.isEmpty()) {
+                String json = RootHelper.readFile(found);
+                if (json != null) {
+                    String ip = extractJsonValue(json, "remoteIp");
+                    if (ip != null && !ip.isEmpty()) remoteIp = ip;
+                    String port = extractJsonValue(json, "remotePort");
+                    if (port != null && !port.isEmpty()) {
+                        try { remotePort = Integer.parseInt(port); } catch (NumberFormatException ignored) {}
+                    }
+                }
             }
-        }
 
-        found = RootHelper.findFile("udp.json", "/data/data");
-        if (found != null && !found.isEmpty()) {
-            String json = RootHelper.readFile(found);
-            if (json != null) {
-                String ip = extractJsonValue(json, "remoteIp");
-                if (ip != null && !ip.isEmpty()) remoteIp = ip;
-                String port = extractJsonValue(json, "remotePort");
-                if (port != null && !port.isEmpty()) remotePort = Integer.parseInt(port);
+            found = RootHelper.findFile("0.bin", "/sdcard/Download");
+            if (found != null && !found.isEmpty()) {
+                byte[] data = RootHelper.readFileBinary(found);
+                if (data != null && data.length > 100 && data.length < 8192) {
+                    if (loadFromBin(data)) return true;
+                }
             }
+        } catch (Throwable t) {
+            appendLog("rootAutoLoad error: " + t.getMessage());
         }
 
         return false;

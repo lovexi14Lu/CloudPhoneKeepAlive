@@ -127,21 +127,32 @@ public class RootKeepAlive {
     public static boolean copySessionToApp(String appFilesDir) {
         if (!RootHelper.hasRoot()) return false;
 
-        String sessionDir = appFilesDir + "/session";
-        RootHelper.mkdirs(sessionDir);
+        try {
+            String sessionDir = appFilesDir + "/session";
+            RootHelper.mkdirs(sessionDir);
 
-        String found = RootHelper.findFile("0.bin", "/data");
-        if (found != null) {
-            RootHelper.copyFile(found, sessionDir + "/0.bin");
+            String found = RootHelper.findFile("0.bin", "/data/local/tmp");
+            if (found == null) {
+                found = RootHelper.findFile("0.bin", "/sdcard/Download");
+            }
+            if (found != null) {
+                RootHelper.copyFile(found, sessionDir + "/0.bin");
+            }
+
+            found = RootHelper.findFile("udp.json", "/data/local/tmp");
+            if (found == null) {
+                found = RootHelper.findFile("udp.json", "/sdcard/Download");
+            }
+            if (found != null) {
+                RootHelper.copyFile(found, sessionDir + "/udp.json");
+            }
+
+            RootHelper.execSilent("chmod -R 755 " + sessionDir);
+
+            return new java.io.File(sessionDir + "/0.bin").exists();
+        } catch (Throwable t) {
+            android.util.Log.e(TAG, "copySessionToApp error: " + t.getMessage());
+            return false;
         }
-
-        found = RootHelper.findFile("udp.json", "/data");
-        if (found != null) {
-            RootHelper.copyFile(found, sessionDir + "/udp.json");
-        }
-
-        RootHelper.execSilent("chmod -R 755 " + sessionDir);
-
-        return new java.io.File(sessionDir + "/0.bin").exists();
     }
 }
