@@ -41,6 +41,7 @@ public class UdpHeartbeatService extends Service {
     private static final int DEFAULT_MAX_RETRY = 5;
     private static final int DEFAULT_RECONNECT_DELAY = 10;
     private static final int ROOT_REFRESH_CYCLES = 20;
+    private static final long WAKELOCK_TIMEOUT_MS = 24 * 60 * 60 * 1000L;
 
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final AtomicInteger failCount = new AtomicInteger(0);
@@ -52,7 +53,7 @@ public class UdpHeartbeatService extends Service {
 
     private Handler handler;
     private PowerManager.WakeLock wakeLock;
-    private Thread heartbeatThread;
+    private volatile Thread heartbeatThread;
 
     private SharedPreferences prefs;
 
@@ -79,13 +80,18 @@ public class UdpHeartbeatService extends Service {
             return START_STICKY;
         }
 
-        if (RootHelper.hasRoot()) {
-            RootKeepAlive.apply();
-            RootKeepAlive.copySessionToApp(getFilesDir().getAbsolutePath());
-        }
-
-        loadSession();
-        startHeartbeatLoop();
+        new Thread(() -> {
+            try {
+                if (RootHelper.hasRoot()) {
+                    RootKeepAlive.apply();
+                    RootKeepAlive.copySessionToApp(getFilesDir().getAbsolutePath());
+                }
+                loadSession();
+            } catch (Throwable t) {
+                Log.e(TAG, "Init error: " + t.getMessage());
+            }
+            startHeartbeatLoop();
+        }, "UdpInitThread").start();
 
         Log.i(TAG, "UdpHeartbeatService started");
         return START_STICKY;
@@ -94,8 +100,9 @@ public class UdpHeartbeatService extends Service {
     @Override
     public void onDestroy() {
         running.set(false);
-        if (heartbeatThread != null) {
-            heartbeatThread.interrupt();
+        Thread t = heartbeatThread;
+        if (t != null) {
+            t.interrupt();
         }
         releaseWakeLock();
         Log.i(TAG, "UdpHeartbeatService destroyed");
@@ -113,13 +120,19 @@ public class UdpHeartbeatService extends Service {
     private void loadSession() {
         SessionManager session = SessionManager.getInstance();
 
+        if (session.isValid()) return;
+
+        if (session.loadFromAssets()) {
+            Log.i(TAG, "Session loaded from assets");
+        }
+
         String binPath = prefs.getString("session_bin_path", "");
         if (binPath != null && !binPath.isEmpty() && session.loadFromBin(binPath)) {
             Log.i(TAG, "Session loaded from config: " + binPath);
         } else if (session.loadFromBin(getFilesDir().getAbsolutePath() + "/session/0.bin")) {
             Log.i(TAG, "Session loaded from app files");
         } else if (session.autoLoad()) {
-            Log.i(TAG, "Session auto-loaded from cloud phone data");
+            Log.i(TAG, "Session auto-loaded");
         } else {
             Log.w(TAG, "Failed to load session from any path, will retry");
             return;
@@ -150,11 +163,13 @@ public class UdpHeartbeatService extends Service {
                         Log.w(TAG, "Heartbeat failed (consecutive: " + fails + ")");
 
                         int maxRetry = prefs.getInt("max_fail_count", DEFAULT_MAX_RETRY);
+                        maxRetry = Math.max(1, maxRetry);
                         if (fails >= maxRetry) {
                             Log.e(TAG, "Max retries reached, reconnecting...");
                             reconnectCount.incrementAndGet();
                             failCount.set(0);
                             int delay = prefs.getInt("reconnect_delay", DEFAULT_RECONNECT_DELAY);
+                            delay = Math.max(1, Math.min(delay, 300));
                             Thread.sleep(delay * 1000L);
                             loadSession();
                             continue;
@@ -165,7 +180,11 @@ public class UdpHeartbeatService extends Service {
 
                     int cycle = cycleCount.incrementAndGet();
                     if (RootHelper.hasRoot() && cycle % ROOT_REFRESH_CYCLES == 0) {
-                        RootKeepAlive.apply();
+                        try {
+                            RootKeepAlive.apply();
+                        } catch (Throwable t) {
+                            Log.e(TAG, "RootKeepAlive refresh error: " + t.getMessage());
+                        }
                     }
 
                     Thread.sleep(interval * 1000L);
@@ -173,8 +192,8 @@ public class UdpHeartbeatService extends Service {
                 } catch (InterruptedException e) {
                     Log.i(TAG, "Heartbeat thread interrupted");
                     break;
-                } catch (Exception e) {
-                    Log.e(TAG, "Heartbeat error: " + e.getMessage());
+                } catch (Throwable t) {
+                    Log.e(TAG, "Heartbeat error: " + t.getMessage());
                     try {
                         Thread.sleep(5000);
                     } catch (InterruptedException ie) {
@@ -192,6 +211,7 @@ public class UdpHeartbeatService extends Service {
 
     private int calculateInterval() {
         int baseInterval = prefs.getInt("heartbeat_interval", DEFAULT_INTERVAL);
+        baseInterval = Math.max(1, baseInterval);
         int fails = failCount.get();
 
         if (fails > 0) {
@@ -216,10 +236,9 @@ public class UdpHeartbeatService extends Service {
         String host = session.getRemoteIp();
         int port = session.getRemotePort();
         int timeout = prefs.getInt("heartbeat_timeout", DEFAULT_TIMEOUT);
+        timeout = Math.max(1, timeout);
 
-        DatagramSocket socket = null;
-        try {
-            socket = new DatagramSocket();
+        try (DatagramSocket socket = new DatagramSocket()) {
             socket.setSoTimeout(timeout * 1000);
 
             InetAddress address = InetAddress.getByName(host);
@@ -243,10 +262,6 @@ public class UdpHeartbeatService extends Service {
         } catch (Exception e) {
             Log.w(TAG, "Heartbeat send failed: " + e.getMessage());
             return false;
-        } finally {
-            if (socket != null && !socket.isClosed()) {
-                socket.close();
-            }
         }
     }
 
@@ -257,8 +272,8 @@ public class UdpHeartbeatService extends Service {
                 wakeLock = pm.newWakeLock(
                         PowerManager.PARTIAL_WAKE_LOCK, "CloudPhoneKeepAlive::Heartbeat");
                 wakeLock.setReferenceCounted(false);
-                wakeLock.acquire();
-                Log.i(TAG, "WakeLock acquired");
+                wakeLock.acquire(WAKELOCK_TIMEOUT_MS);
+                Log.i(TAG, "WakeLock acquired with timeout 24h");
             }
         } catch (Exception e) {
             Log.e(TAG, "WakeLock acquire failed: " + e.getMessage());

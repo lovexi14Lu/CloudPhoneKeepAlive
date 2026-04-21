@@ -48,10 +48,12 @@ public class MainHook implements IXposedHookLoadPackage {
         XC_MethodHook blockHook = new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) {
-                String pkg = (String) param.args[0];
-                if (isProtectedApp(pkg)) {
-                    XposedBridge.log(TAG + ": blocked forceStopPackage for " + pkg);
-                    param.setResult(null);
+                if (param.args[0] instanceof String) {
+                    String pkg = (String) param.args[0];
+                    if (isProtectedApp(pkg)) {
+                        XposedBridge.log(TAG + ": blocked forceStopPackage for " + pkg);
+                        param.setResult(null);
+                    }
                 }
             }
         };
@@ -80,10 +82,12 @@ public class MainHook implements IXposedHookLoadPackage {
         XC_MethodHook blockHook = new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) {
-                String pkg = (String) param.args[0];
-                if (isProtectedApp(pkg)) {
-                    XposedBridge.log(TAG + ": blocked killBackgroundProcesses for " + pkg);
-                    param.setResult(null);
+                if (param.args[0] instanceof String) {
+                    String pkg = (String) param.args[0];
+                    if (isProtectedApp(pkg)) {
+                        XposedBridge.log(TAG + ": blocked killBackgroundProcesses for " + pkg);
+                        param.setResult(null);
+                    }
                 }
             }
         };
@@ -368,9 +372,8 @@ public class MainHook implements IXposedHookLoadPackage {
                         new XC_MethodHook() {
                             @Override
                             protected void beforeHookedMethod(MethodHookParam param) {
-                                String pkg = (String) param.args[1];
-                                if (isProtectedApp(pkg)) {
-                                    param.args[0] = Long.MAX_VALUE;
+                                if (param.args[1] instanceof String && isProtectedApp((String) param.args[1])) {
+                                    param.args[0] = 24 * 60 * 60 * 1000L;
                                 }
                             }
                         });
@@ -384,7 +387,7 @@ public class MainHook implements IXposedHookLoadPackage {
                             @Override
                             protected void beforeHookedMethod(MethodHookParam param) {
                                 if (param.args[1] instanceof String && isProtectedApp((String) param.args[1])) {
-                                    param.args[0] = Long.MAX_VALUE;
+                                    param.args[0] = 24 * 60 * 60 * 1000L;
                                 }
                             }
                         });
@@ -464,9 +467,11 @@ public class MainHook implements IXposedHookLoadPackage {
                     new XC_MethodHook() {
                         @Override
                         protected void afterHookedMethod(MethodHookParam param) {
-                            String pkg = (String) param.args[0];
-                            if (isProtectedApp(pkg) && param.getResult() == null) {
-                                XposedBridge.log(TAG + ": startProcessLocked failed for " + pkg);
+                            if (param.args[0] instanceof String) {
+                                String pkg = (String) param.args[0];
+                                if (isProtectedApp(pkg) && param.getResult() == null) {
+                                    XposedBridge.log(TAG + ": startProcessLocked failed for " + pkg);
+                                }
                             }
                         }
                     });
@@ -509,6 +514,6 @@ public class MainHook implements IXposedHookLoadPackage {
     }
 
     private boolean isProtectedApp(String pkg) {
-        return MODULE_PKG.equals(pkg);
+        return pkg != null && MODULE_PKG.equals(pkg);
     }
 }

@@ -67,7 +67,7 @@ public class RootKeepAlive {
             }
         }
 
-        ok &= RootHelper.execSilent("echo 1 > /sys/module/lowmemorykiller/parameters/enable 2>/dev/null || true");
+        ok &= RootHelper.execSilent("echo 0 > /sys/module/lowmemorykiller/parameters/enable 2>/dev/null || true");
 
         return ok;
     }

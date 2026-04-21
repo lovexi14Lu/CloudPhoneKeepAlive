@@ -301,15 +301,13 @@ public class SessionManager {
     }
 
     private boolean loadFromJson(String jsonPath) {
-        try {
-            java.io.BufferedReader reader = new java.io.BufferedReader(
-                    new java.io.FileReader(jsonPath));
+        try (java.io.BufferedReader reader = new java.io.BufferedReader(
+                new java.io.FileReader(jsonPath))) {
             StringBuilder sb = new StringBuilder();
             String line;
             while ((line = reader.readLine()) != null) {
                 sb.append(line);
             }
-            reader.close();
 
             String json = sb.toString();
             String ip = extractJsonValue(json, "remoteIp");
@@ -318,7 +316,7 @@ public class SessionManager {
             }
             String port = extractJsonValue(json, "remotePort");
             if (port != null && !port.isEmpty()) {
-                remotePort = Integer.parseInt(port);
+                try { remotePort = Integer.parseInt(port); } catch (NumberFormatException ignored) {}
             }
             return true;
         } catch (Throwable ignored) {
@@ -332,11 +330,13 @@ public class SessionManager {
         if (idx < 0) return null;
         int colon = json.indexOf(':', idx + pattern.length());
         if (colon < 0) return null;
-        int start = json.indexOf('"', colon + 1);
-        if (start < 0) return null;
-        int end = json.indexOf('"', start + 1);
+        int start = colon + 1;
+        while (start < json.length() && json.charAt(start) == ' ') start++;
+        if (start >= json.length() || json.charAt(start) != '"') return null;
+        start++;
+        int end = json.indexOf('"', start);
         if (end < 0) return null;
-        return json.substring(start + 1, end);
+        return json.substring(start, end);
     }
 
     private boolean searchSessionFile(File dir, int maxDepth) {
@@ -456,54 +456,58 @@ public class SessionManager {
         return Arrays.copyOf(rawSessionData, end);
     }
 
-    public boolean isValid() {
+    public synchronized boolean isValid() {
         return sessionId != null && !sessionId.isEmpty()
                 && certificate != null && !certificate.isEmpty();
     }
 
-    public String getSessionId() {
+    public synchronized String getSessionId() {
         return sessionId != null ? sessionId : "";
     }
 
-    public String getPlatform() {
+    public synchronized String getPlatform() {
         return platform != null ? platform : "";
     }
 
-    public String getUserId() {
+    public synchronized String getUserId() {
         return userId != null ? userId : "";
     }
 
-    public String getVersion() {
+    public synchronized String getVersion() {
         return version != null ? version : "";
     }
 
-    public String getCertificate() {
+    public synchronized String getCertificate() {
         return certificate != null ? certificate : "";
     }
 
-    public String getRemoteIp() {
+    public synchronized String getRemoteIp() {
         return remoteIp;
     }
 
-    public void setRemoteIp(String remoteIp) {
+    public synchronized void setRemoteIp(String remoteIp) {
         this.remoteIp = remoteIp;
     }
 
-    public int getRemotePort() {
+    public synchronized int getRemotePort() {
         return remotePort;
     }
 
-    public void setRemotePort(int remotePort) {
+    public synchronized void setRemotePort(int remotePort) {
         this.remotePort = remotePort;
     }
 
-    public long getSessionTimestamp() {
+    public synchronized long getSessionTimestamp() {
         return sessionTimestamp;
     }
 
-    public String getSummary() {
+    public synchronized String getSummary() {
+        String sid = sessionId != null ? sessionId : "null";
         return String.format("sid=%s... platform=%s uid=%s ver=%s ip=%s:%d",
-                sessionId != null && sessionId.length() > 16 ? sessionId.substring(0, 16) : sessionId,
-                platform, userId, version, remoteIp, remotePort);
+                sid.length() > 16 ? sid.substring(0, 16) : sid,
+                platform != null ? platform : "null",
+                userId != null ? userId : "null",
+                version != null ? version : "null",
+                remoteIp, remotePort);
     }
 }

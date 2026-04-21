@@ -290,14 +290,12 @@ public class MainActivity extends Activity {
         }
         if (session.isValid()) {
             byte[] data = session.buildUdpPacket();
-            try {
-                java.net.DatagramSocket socket = new java.net.DatagramSocket();
+            try (java.net.DatagramSocket socket = new java.net.DatagramSocket()) {
                 socket.setSoTimeout(10000);
                 java.net.InetAddress addr = java.net.InetAddress.getByName(session.getRemoteIp());
                 java.net.DatagramPacket packet = new java.net.DatagramPacket(
                         data, data.length, addr, session.getRemotePort());
                 socket.send(packet);
-                socket.close();
                 handler.post(() -> appendLog(getString(R.string.heartbeat_sent)));
             } catch (Exception e) {
                 handler.post(() -> appendLog(getString(R.string.heartbeat_failed) + e.getMessage()));
@@ -318,7 +316,7 @@ public class MainActivity extends Activity {
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                boolean hasRoot = RootHelper.hasRoot();
+                boolean hasRoot = Boolean.TRUE.equals(RootHelper.cachedRootStatus());
                 String rootStatus = hasRoot ? " " + getString(R.string.root_status) : " " + getString(R.string.no_root_status);
                 if (isServiceRunning()) {
                     if (tvStatus != null) tvStatus.setText(getString(R.string.status_running) + rootStatus);

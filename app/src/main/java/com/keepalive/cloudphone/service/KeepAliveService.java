@@ -20,6 +20,7 @@ public class KeepAliveService extends Service {
     private static final String TAG = "CloudPhoneKeepAlive";
     private static final String CHANNEL_ID = "keepalive_main";
     private static final int NOTIFICATION_ID = 2000;
+    private static final long WAKELOCK_TIMEOUT_MS = 24 * 60 * 60 * 1000L;
 
     private PowerManager.WakeLock wakeLock;
 
@@ -66,7 +67,7 @@ public class KeepAliveService extends Service {
                 wakeLock = pm.newWakeLock(
                         PowerManager.PARTIAL_WAKE_LOCK, "CloudPhoneKeepAlive::Main");
                 wakeLock.setReferenceCounted(false);
-                wakeLock.acquire();
+                wakeLock.acquire(WAKELOCK_TIMEOUT_MS);
             }
         } catch (Exception e) {
             Log.e(TAG, "WakeLock acquire failed: " + e.getMessage());
